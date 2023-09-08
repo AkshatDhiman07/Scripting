@@ -1,0 +1,11 @@
+Linux Shell scripting 
+--------------------------------
+what is Linux? 
+Linux is  oa free	open source operating system based on Unix. Linus torvals originally created linux with the helpf of developers around the world. 
+
+Linux is a kernel. A Kernel provides access to the computer hardware and control access to resouce such as: Files and data, running programs, loading programs into memory, networks, security and firewall and other resources etc.
+
+What is Bash?
+Bash is the shell, or command language interpreter for linux operating system. Typically you'll see a $ sign which indicates that the bash is waiting for the user for a command. This is called command prompt or shell prompt.
+The defualt command prompt ends with a $ for regular users and for root users it ends with an #. 
+
