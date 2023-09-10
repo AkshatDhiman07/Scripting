@@ -1,0 +1,7 @@
+#! /bin/bash
+My_shell="hey "
+echo "${My_shell}there my name is Akshat"
+
+output: 
+Hey there my name is Akshat
+
