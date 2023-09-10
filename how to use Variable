@@ -1,6 +1,6 @@
-#! /bin/bash
-My_shell="hey "
-echo "${My_shell}there my name is Akshat"
+#! /bin/bash                                    # code start
+My_shell="hey "                                 # variable declaration
+echo "${My_shell}there my name is Akshat"       # output syntax
 
 output: 
 Hey there my name is Akshat
