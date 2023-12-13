@@ -1,0 +1,67 @@
+Bash SCript for RabbitMQ Cluster Setup on Ubuntu
+Prerequsites: 
+1. One Masternode and minimum one slave node. 
+2. keys should be add so that we can ssh easily through the servers.
+3. edit your hostname and ip 
+#! /bin/bash
+declare -a REM_USER="root"
+declare -a REM_MASTERHOSTNAME="<Hostname of Masternode>"
+declare -a REM_NODE=<Hostnames of your Nodes/Slaves> eg: ("slave 1" "slave2" "slave3") 
+declare -a REM_SERVERS=<Hostnames of each server including masterhost> eg: ("Masterhost" "slave1" "slave2" "slave3")
+for target in "${REM_SERVERS[@]}"
+do 
+ssh ${REM_USER}@${target}<<-END 
+echo '<Hostname> <IP>' | sudo tee -a /etc/hosts
+echo '<Hostname> <IP>' | sudo tee -a /etc/hosts
+sudo apt-get update && sudo apt-get upgrade -y
+sudo apt-get install curl wget gnupg apt-transport-https -y
+curl -fsSL https://packages.erlang-solutions.com/ubuntu/erlang_solutions.asc | sudo gpg --dearmor -o /usr/share/keyrings/erlang.gpg 
+echo "deb [signed-by=/usr/share/keyrings/erlang.gpg] https://packages.erlang-solutions.com/ubuntu $(lsb_release -cs) contrib" | sudo tee /etc/apt/sources.list.d/erlang.list 
+sudo apt-get update -y
+sudo apt-get install erlang -y
+curl -s https://packagecloud.io/install/repositories/rabbitmq/rabbitmq-server/script.deb.sh | sudo bash
+sudo apt-get install rabbitmq-server -y
+#checkmqstatus
+if systemctl status rabbitmq-server | grep "running"; then
+  echo "RabbitMQ is running"
+else
+  echo "RabbitMQ is not running"
+fi
+#edting rabbitmqconfig file
+echo 'cluster_formation.peer_discovery_backend = rabbit_peer_discovery_classic_config ' | sudo tee -a /etc/rabbitmq/rabbitmq.conf
+echo 'cluster_formation.classic_config.nodes.1 = rabbit@rabbitmq-node1   ' | sudo tee -a /etc/rabbitmq/rabbitmq.conf
+echo 'cluster_formation.classic_config.nodes.1 = rabbit@rabbitmq-node2   ' | sudo tee -a /etc/rabbitmq/rabbitmq.conf
+END
+done
+#declare -a REM_USER="root"
+#declare -a REM_MASTERHOSTNAME="rmq1"
+#declare -a REM_NODE="rmq2"
+for node in $REM_NODE;
+do
+ssh ${REM_USER}@${REM_NODE} " sudo systemctl stop rabbitmq-server "
+done
+scp -r /var/lib/rabbitmq/.erlang.cookie root@rmq2:/var/lib/rabbitmq/.erlang.cookie
+for node in $REM_NODE;
+do
+ssh ${REM_USER}@${REM_NODE} " sudo systemctl restart rabbitmq-server && \
+                              sudo chown rabbitmq:rabbitmq /var/lib/rabbitmq/.erlang.cookie && \
+                              sudo chmod 400 /var/lib/rabbitmq/.erlang.cookie && \
+                              sudo rabbitmqctl stop_app && \
+                              sudo rabbitmqctl reset && \
+                              sudo rabbitmqctl join_cluster rabbit@$REM_MASTERHOSTNAME && \
+                              sudo rabbitmqctl start_app && \
+                              sudo rabbitmqctl cluster_status"
+done
+ssh ${REM_USER}@${REM_MASTERHOSTNAME}<<-END
+sudo rabbitmqctl cluster_status && \
+rabbitmqctl set_policy ha-all "" '{"ha-mode":"all","ha-sync-mode":"automatic"}' && \
+sudo rabbitmqctl add_user admin4 AdminPassRabbitMQ && \
+sudo rabbitmqctl set_user_tags admin4 administrator && \
+sudo rabbitmqctl set_permissions admin4 ".*" ".*" ".*" && \
+#Enabling the RabbitMQ Management Plugin
+sudo rabbitmq-plugins enable rabbitmq_management
+END
+ssh ${REM_USER}@${REM_NODE}<<-END
+rabbitmqctl set_policy ha-all "" '{"ha-mode":"all","ha-sync-mode":"automatic"}' && \
+sudo rabbitmq-plugins enable rabbitmq_management
+END
